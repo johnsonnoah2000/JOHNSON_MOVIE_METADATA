@@ -1,0 +1,383 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Movie RAG Assistant</title>
+  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet"/>
+  <style>
+    :root {
+      --bg:        #0a0a0f;
+      --surface:   #13131a;
+      --card:      #1a1a24;
+      --border:    #2a2a3a;
+      --accent:    #e8c84a;
+      --accent2:   #e8624a;
+      --text:      #e8e8f0;
+      --muted:     #7a7a9a;
+      --success:   #4ae8a0;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'DM Sans', sans-serif;
+      min-height: 100vh;
+      background-image:
+        radial-gradient(ellipse 80% 50% at 50% -10%, rgba(232,200,74,0.08) 0%, transparent 60%),
+        radial-gradient(ellipse 60% 40% at 80% 80%, rgba(232,98,74,0.05) 0%, transparent 60%);
+    }
+
+    /* ── Header ── */
+    header {
+      text-align: center;
+      padding: 3.5rem 1rem 2rem;
+      position: relative;
+    }
+    .header-badge {
+      display: inline-block;
+      background: rgba(232,200,74,0.12);
+      border: 1px solid rgba(232,200,74,0.3);
+      color: var(--accent);
+      font-size: 0.7rem;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      padding: 0.3rem 0.9rem;
+      border-radius: 999px;
+      margin-bottom: 1rem;
+    }
+    h1 {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: clamp(3rem, 8vw, 6rem);
+      letter-spacing: 0.04em;
+      line-height: 1;
+      background: linear-gradient(135deg, var(--accent) 0%, #fff 50%, var(--accent2) 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    .subtitle {
+      color: var(--muted);
+      font-size: 0.95rem;
+      margin-top: 0.5rem;
+      font-weight: 300;
+    }
+
+    /* ── Main Layout ── */
+    main {
+      max-width: 860px;
+      margin: 0 auto;
+      padding: 0 1.5rem 5rem;
+    }
+
+    /* ── Search Box ── */
+    .search-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 2rem;
+      margin-bottom: 2rem;
+      box-shadow: 0 0 40px rgba(232,200,74,0.04);
+    }
+    .search-label {
+      font-size: 0.75rem;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: 0.75rem;
+      display: block;
+    }
+    .search-row {
+      display: flex;
+      gap: 0.75rem;
+    }
+    input[type="text"] {
+      flex: 1;
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      color: var(--text);
+      font-family: 'DM Sans', sans-serif;
+      font-size: 1rem;
+      padding: 0.85rem 1.1rem;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+    input[type="text"]:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(232,200,74,0.1);
+    }
+    input[type="text"]::placeholder { color: var(--muted); }
+
+    button[type="submit"] {
+      background: var(--accent);
+      color: #0a0a0f;
+      border: none;
+      border-radius: 10px;
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 1.1rem;
+      letter-spacing: 0.08em;
+      padding: 0 1.8rem;
+      cursor: pointer;
+      transition: background 0.2s, transform 0.1s;
+      white-space: nowrap;
+    }
+    button[type="submit"]:hover { background: #f5d85a; }
+    button[type="submit"]:active { transform: scale(0.97); }
+
+    /* ── Example queries ── */
+    .examples {
+      margin-top: 1rem;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+    }
+    .example-chip {
+      background: rgba(255,255,255,0.04);
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      color: var(--muted);
+      font-size: 0.75rem;
+      padding: 0.3rem 0.8rem;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .example-chip:hover {
+      border-color: var(--accent);
+      color: var(--accent);
+      background: rgba(232,200,74,0.06);
+    }
+
+    /* ── Error ── */
+    .error-box {
+      background: rgba(232,98,74,0.1);
+      border: 1px solid rgba(232,98,74,0.3);
+      border-radius: 10px;
+      color: var(--accent2);
+      padding: 0.9rem 1.2rem;
+      margin-bottom: 1.5rem;
+      font-size: 0.9rem;
+    }
+
+    /* ── Section headers ── */
+    .section-title {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 1.4rem;
+      letter-spacing: 0.08em;
+      color: var(--muted);
+      margin-bottom: 1rem;
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+    }
+    .section-title span {
+      display: inline-block;
+      width: 28px;
+      height: 2px;
+      background: var(--border);
+    }
+
+    /* ── Retrieved rows ── */
+    .movies-grid {
+      display: grid;
+      gap: 0.75rem;
+      margin-bottom: 2rem;
+    }
+    .movie-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 1.2rem 1.4rem;
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 0.5rem;
+      transition: border-color 0.2s;
+      animation: fadeUp 0.3s ease both;
+    }
+    .movie-card:hover { border-color: rgba(232,200,74,0.3); }
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(8px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+    .movie-card:nth-child(1) { animation-delay: 0.05s; }
+    .movie-card:nth-child(2) { animation-delay: 0.10s; }
+    .movie-card:nth-child(3) { animation-delay: 0.15s; }
+    .movie-card:nth-child(4) { animation-delay: 0.20s; }
+    .movie-card:nth-child(5) { animation-delay: 0.25s; }
+
+    .movie-title {
+      font-weight: 500;
+      font-size: 1rem;
+      color: var(--text);
+      margin-bottom: 0.3rem;
+    }
+    .movie-meta {
+      font-size: 0.78rem;
+      color: var(--muted);
+      margin-bottom: 0.5rem;
+    }
+    .movie-overview {
+      font-size: 0.83rem;
+      color: #9090b0;
+      line-height: 1.5;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+    .score-badge {
+      align-self: start;
+      background: rgba(232,200,74,0.1);
+      border: 1px solid rgba(232,200,74,0.25);
+      color: var(--accent);
+      font-size: 0.72rem;
+      font-weight: 500;
+      padding: 0.25rem 0.55rem;
+      border-radius: 6px;
+      white-space: nowrap;
+    }
+    .vote-stars {
+      display: inline-block;
+      color: var(--accent);
+      font-size: 0.75rem;
+      margin-right: 0.4rem;
+    }
+
+    /* ── Answer box ── */
+    .answer-card {
+      background: var(--surface);
+      border: 1px solid rgba(74,232,160,0.2);
+      border-radius: 16px;
+      padding: 1.8rem 2rem;
+      box-shadow: 0 0 30px rgba(74,232,160,0.04);
+      animation: fadeUp 0.4s ease 0.3s both;
+    }
+    .answer-header {
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+      margin-bottom: 1.1rem;
+    }
+    .answer-dot {
+      width: 8px; height: 8px;
+      background: var(--success);
+      border-radius: 50%;
+      box-shadow: 0 0 8px var(--success);
+      animation: pulse 2s infinite;
+    }
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50%       { opacity: 0.4; }
+    }
+    .answer-label {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 1rem;
+      letter-spacing: 0.1em;
+      color: var(--success);
+    }
+    .answer-text {
+      font-size: 0.95rem;
+      line-height: 1.75;
+      color: var(--text);
+      white-space: pre-wrap;
+    }
+
+    /* ── Footer ── */
+    footer {
+      text-align: center;
+      padding: 2rem;
+      color: var(--muted);
+      font-size: 0.75rem;
+      letter-spacing: 0.05em;
+      border-top: 1px solid var(--border);
+      margin-top: 4rem;
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="header-badge">RAG · TF-IDF · Ollama</div>
+  <h1>Movie Intelligence</h1>
+  <p class="subtitle">Ask anything about movies — powered by retrieval-augmented generation</p>
+</header>
+
+<main>
+
+  <!-- Search Form -->
+  <div class="search-card">
+    <label class="search-label" for="question">Your Question</label>
+    <form method="POST" action="/">
+      <div class="search-row">
+        <input
+          type="text"
+          id="question"
+          name="question"
+          placeholder="e.g. Find movies about space travel and exploration..."
+          value="{{ question }}"
+          autocomplete="off"
+        />
+        <button type="submit">Search</button>
+      </div>
+    </form>
+    <div class="examples">
+      <span class="example-chip" onclick="setQuery('Find movies about space travel and exploration.')">🚀 Space travel</span>
+      <span class="example-chip" onclick="setQuery('What are some high-rated drama movies in this dataset?')">🎭 High-rated dramas</span>
+      <span class="example-chip" onclick="setQuery('Which retrieved movies are related to war themes?')">⚔️ War themes</span>
+      <span class="example-chip" onclick="setQuery('Find movies with romance and comedy elements.')">💕 Romance & comedy</span>
+    </div>
+  </div>
+
+  <!-- Error -->
+  {% if error %}
+  <div class="error-box">⚠ {{ error }}</div>
+  {% endif %}
+
+  <!-- Retrieved Rows -->
+  {% if retrieved_rows %}
+  <div class="section-title"><span></span> Retrieved Movies <span></span></div>
+  <div class="movies-grid">
+    {% for row in retrieved_rows %}
+    <div class="movie-card">
+      <div>
+        <div class="movie-title">{{ row.title }}</div>
+        <div class="movie-meta">
+          <span class="vote-stars">★</span>{{ "%.1f"|format(row.vote_average) }}
+          &nbsp;·&nbsp; {{ row.release_date[:4] if row.release_date and row.release_date != 'N/A' else 'N/A' }}
+          &nbsp;·&nbsp; {{ row.genres[:60] if row.genres else 'N/A' }}
+        </div>
+        <div class="movie-overview">{{ row.overview }}</div>
+      </div>
+      <div class="score-badge">{{ "%.3f"|format(row.score) }}</div>
+    </div>
+    {% endfor %}
+  </div>
+  {% endif %}
+
+  <!-- LLM Answer -->
+  {% if answer %}
+  <div class="section-title"><span></span> AI Answer <span></span></div>
+  <div class="answer-card">
+    <div class="answer-header">
+      <div class="answer-dot"></div>
+      <div class="answer-label">Grounded Response · minimax-m2.1:cloud</div>
+    </div>
+    <div class="answer-text">{{ answer }}</div>
+  </div>
+  {% endif %}
+
+</main>
+
+<footer>Movie RAG Assistant · Flask + TF-IDF + Ollama · DSA502</footer>
+
+<script>
+  function setQuery(text) {
+    document.getElementById('question').value = text;
+    document.getElementById('question').focus();
+  }
+</script>
+
+</body>
+</html>
